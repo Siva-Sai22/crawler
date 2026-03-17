@@ -6,23 +6,25 @@ import (
 	"log"
 	"net/http"
 	"strings"
+
+	"github.com/Siva-Sai22/crawler/urlqueue"
 )
 
-func splitUrl(url string) (string, string) {
+func splitURL(url string) (string, string) {
 	urlParts := strings.SplitAfterN(url, "/", 4)
 
-	baseUrl := urlParts[0] + urlParts[1] + urlParts[2]
-	baseUrl = strings.TrimRight(baseUrl, "/")
+	baseURL := urlParts[0] + urlParts[1] + urlParts[2]
+	baseURL = strings.TrimRight(baseURL, "/")
 
 	var path string
 	if len(urlParts) == 4 {
 		path = "/" + urlParts[3]
 	}
-	return baseUrl, path
+	return baseURL, path
 }
 
-func getRobotTxt(baseUrl string) (string, bool) {
-	url := baseUrl + "/robots.txt"
+func getRobotTxt(baseURL string) (string, bool) {
+	url := baseURL + "/robots.txt"
 
 	resp, err := http.Get(url)
 	if err != nil {
@@ -44,8 +46,8 @@ func getRobotTxt(baseUrl string) (string, bool) {
 	return string(body), true
 }
 
-func getDisallowedPaths(baseUrl string) []string {
-	robotsTxt, ok := getRobotTxt(baseUrl)
+func getDisallowedPaths(baseURL string) []string {
+	robotsTxt, ok := getRobotTxt(baseURL)
 	if !ok {
 		return []string{}
 	}
@@ -60,8 +62,8 @@ func getDisallowedPaths(baseUrl string) []string {
 	return disallowedPaths
 }
 
-func checkPathDisallowed(baseUrl, path string) bool {
-	disallowedPaths := getDisallowedPaths(baseUrl)
+func checkPathDisallowed(baseURL, path string) bool {
+	disallowedPaths := getDisallowedPaths(baseURL)
 
 	for _, disallowedPath := range disallowedPaths {
 		if strings.HasPrefix(path, disallowedPath) {
@@ -71,22 +73,22 @@ func checkPathDisallowed(baseUrl, path string) bool {
 	return false
 }
 
-func getOutboundLinks(body string, baseUrl string) []string {
+func getOutboundLinks(body string, baseURL string) []string {
 	links := make([]string, 0)
-	for _, link := range strings.Split(body, "href=\"") {
+	for link := range strings.SplitSeq(body, "href=\"") {
 		if strings.HasPrefix(link, "http") {
 			links = append(links, strings.TrimSpace(link))
 		} else if strings.HasPrefix(link, "/") {
-			links = append(links, baseUrl+link)
+			links = append(links, baseURL+link)
 		}
 	}
 	return links
 }
 
-func Fetch(url string) (string, error) {
-	baseUrl, path := splitUrl(url)
+func Fetch(url string, urlQueue *urlqueue.URLQueue) (string, error) {
+	baseURL, path := splitURL(url)
 
-	if checkPathDisallowed(baseUrl, path) {
+	if checkPathDisallowed(baseURL, path) {
 		return "", nil
 	}
 
@@ -106,6 +108,9 @@ func Fetch(url string) (string, error) {
 		log.Println("Error reading body: ", err)
 		return "", err
 	}
+
+	outboundLinks := getOutboundLinks(string(body), baseURL)
+	urlQueue.InsertLinks(outboundLinks)
 
 	log.Println("Crawled: ", url)
 	return string(body), nil

@@ -11,7 +11,7 @@ type Queue[T any] struct {
 	tail *node[T]
 }
 
-func QueueInit[T any]() *Queue[T] {
+func New[T any]() *Queue[T] {
 	return &Queue[T]{}
 }
 
