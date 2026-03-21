@@ -2,12 +2,11 @@
 package fetcher
 
 import (
+	"context"
 	"io"
 	"log"
 	"net/http"
 	"strings"
-
-	"github.com/Siva-Sai22/crawler/urlqueue"
 )
 
 func splitURL(url string) (string, string) {
@@ -85,33 +84,38 @@ func getOutboundLinks(body string, baseURL string) []string {
 	return links
 }
 
-func Fetch(url string, urlQueue *urlqueue.URLQueue) (string, error) {
+func Fetch(url string, repo *WebsiteRepository, ctx context.Context) ([]string, error) {
 	baseURL, path := splitURL(url)
 
 	if checkPathDisallowed(baseURL, path) {
-		return "", nil
+		return []string{}, nil
 	}
 
 	resp, err := http.Get(url)
 	if err != nil {
 		log.Println("Error fetching url: ", url, " Error: ", err)
-		return "", err
+		return []string{}, err
 	}
+
 	defer resp.Body.Close()
 
 	if resp.StatusCode == 404 {
-		return "", nil
+		return []string{}, nil
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Println("Error reading body: ", err)
-		return "", err
+		return []string{}, err
 	}
 
 	outboundLinks := getOutboundLinks(string(body), baseURL)
-	urlQueue.InsertLinks(outboundLinks)
 
 	log.Println("Crawled: ", url)
-	return string(body), nil
+	_, err = repo.Create(ctx, url, string(body))
+	if err != nil {
+		return []string{}, err
+	}
+
+	return outboundLinks, nil
 }
