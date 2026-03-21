@@ -2,7 +2,9 @@ package fetcher
 
 import (
 	"context"
+	"errors"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -15,6 +17,8 @@ type Website struct {
 	URL     string
 	Content string
 }
+
+var ErrDuplicate = errors.New("record already exists")
 
 func NewWebsiteRepository(db *pgxpool.Pool) *WebsiteRepository {
 	return &WebsiteRepository{
@@ -40,6 +44,10 @@ func (r *WebsiteRepository) Create(ctx context.Context, url string, content stri
 	query := `INSERT INTO website (url, content) VALUES ($1, $2) RETURNING id`
 	err := r.db.QueryRow(ctx, query, url, content).Scan(&id)
 	if err != nil {
+		var pgxError *pgconn.PgError
+		if errors.As(err, &pgxError) && pgxError.Code == "23505" {
+			return nil, ErrDuplicate
+		}
 		return nil, err
 	}
 

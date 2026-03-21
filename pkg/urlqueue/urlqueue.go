@@ -26,11 +26,11 @@ func (q *URLQueue) InsertLinks(links []string) {
 	}
 }
 
-func (q *URLQueue) Dequeue(repo *fetcher.WebsiteRepository, ctx context.Context) (bool, error) {
+func (q *URLQueue) Dequeue(ctx context.Context, repo *fetcher.WebsiteRepository) (bool, error) {
 	url, ok := q.Queue.Dequeue()
 	if ok {
 		q.visited[url] = true
-		outboundLinks, err := fetcher.Fetch(url, repo, ctx)
+		outboundLinks, err := fetcher.Fetch(ctx, url, repo)
 		if err != nil {
 			return true, err
 		}

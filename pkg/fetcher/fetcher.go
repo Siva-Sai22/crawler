@@ -84,7 +84,7 @@ func getOutboundLinks(body string, baseURL string) []string {
 	return links
 }
 
-func Fetch(url string, repo *WebsiteRepository, ctx context.Context) ([]string, error) {
+func Fetch(ctx context.Context, url string, repo *WebsiteRepository) ([]string, error) {
 	baseURL, path := splitURL(url)
 
 	if checkPathDisallowed(baseURL, path) {
