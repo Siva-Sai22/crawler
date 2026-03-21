@@ -19,6 +19,10 @@ func main() {
 	defer db.Close()
 
 	repo := fetcher.NewWebsiteRepository(db)
+	err = repo.Migrate(context.Background())
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
